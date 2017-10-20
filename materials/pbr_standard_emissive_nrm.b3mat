@@ -1,0 +1,100 @@
+<shader  name="pbr_standard_emissive_nrm" priority="2" material="0" >
+
+<unif name="unif_43" type="vec1" alias="Emissive" magic="43" values="1.0"  range="0.0 1.0" >
+<unif name="unif_2" type="vec1" alias="Roughness" magic="2" values="1.0"  range="0.0 1.0" >
+<unif name="unif_3" type="vec1" alias="Metalness" magic="3" values="1.0"  range="0.0 1.0" >
+<unif name="t_sample_0" value="0" type="texture" magic="100000" alias="Uniform.21">
+<unif name="t_sample_1" value="1" type="texture" magic="100001" alias="Uniform.28">
+<unif name="morph_weight" define="MORPHED">				
+<vert>
+
+#version 420 core
+out vec3 vNormal;
+out vec4 vTangent;
+
+
+
+out vec2 uv_texcoord_0;
+
+
+layout(binding=3) uniform SMaterialParam {
+	vec4 customParam0;
+};
+
+#include <skinning.hpp>
+IN_VERTEX_ALL;
+out vec4 vColor;
+#ifdef DISSOLVE
+	flat out vec2	vDissolveParams;
+#endif
+void main(){
+vec4 vertexPos = vec4(inVertex,1.0);
+vNormal = DecompressNormal( inNormal );
+#ifdef DISSOLVE
+	vDissolveParams = CurrentInstanceDetailParams().xy;
+#endif
+vColor	= CurrentInstanceColor();
+TransformVertex( vertexPos , vNormal );
+gl_Position = vertexPos;
+vTangent = DecompressTangent( inTangent );
+vTangent.xyz = BarokInstanceNormal( vTangent.xyz );
+const vec3 b = cross(vNormal, vTangent.xyz) * vTangent.w;
+const mat3 TBN = mat3(vTangent.xyz,b,vNormal);
+uv_texcoord_0 = DecompressUV( inUV );
+}
+
+
+</vert>
+
+<frag>
+
+#version 420 core
+in vec3 vNormal;
+in vec4 vColor;
+#ifdef DISSOLVE
+	flat in vec2	vDissolveParams;
+#endif
+in vec4 vTangent;
+#include <finalize.hpp>
+#include <cameraBuffer.hpp>
+#include <dissolve.hpp>
+
+
+layout(binding=0) uniform sampler2D t_sample_0;
+layout(binding=1) uniform sampler2D t_sample_1;
+
+
+in vec2 uv_texcoord_0;
+
+
+layout(binding=3) uniform SMaterialParam {
+	vec4 customParam0;
+};
+
+vec3 decode_normal(vec2 e){ return vec3(e,sqrt(1.0-dot(e,e)));}
+
+void main(void) {
+dissolveDiscard(vDissolveParams);
+const vec4 tex_sampler_4 = texture( t_sample_0 , uv_texcoord_0 );
+const float unif_43 = customParam0.x;
+const float unif_2 = customParam0.y;
+const vec4 tex_sampler_6 = texture( t_sample_1 , uv_texcoord_0 );
+const float unif_3 = customParam0.z;
+
+vec3 out_Normal = normalize( decode_normal( (tex_sampler_6.rgb).xy * 2.0 - 1.0 ) );
+
+const vec3 unlit_diffuse = tex_sampler_4.rgb ;
+const vec3 out_Albedo = vColor.rgb * unlit_diffuse;
+const float out_Translucency = 1.0;
+const float out_Emissive = ( tex_sampler_4.a ) * ( unif_43 );
+const vec3 n = normalize( vNormal );
+const vec3 t = normalize( vTangent.xyz );
+const vec3 b = cross( t , n ) * vTangent.w;
+out_Normal = out_Normal.x * t + ( out_Normal.y * b + ( out_Normal.z * n ) );
+const float out_Roughness = ( unif_2 ) * ( tex_sampler_6.b );
+const float out_Metalic = ( unif_3 ) * ( tex_sampler_6.a );
+FinalDraw( out_Albedo , out_Translucency , out_Normal , out_Roughness , out_Metalic , out_Emissive ); }
+
+
+</frag>
+</shader>

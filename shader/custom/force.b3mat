@@ -1,0 +1,104 @@
+<shader  name="force" priority="2" material="0" >
+
+<unif name="unif_21" type="vec1" alias="FlowScale" magic="21" values="0.0"  range="0.0 1.0" >
+<unif name="unif_7" type="vec1" alias="MovementSpeed" magic="7" values="0.0"  range="0.0 10.0" >
+<unif name="t_sample_2" value="2" type="texture" magic="100002" alias="Uniform.47">
+<unif name="t_sample_0" value="0" type="texture" magic="100000" alias="Uniform.40">
+<unif name="color" >											
+<unif name="skinningOffset" define="SKINNED" >				
+<unif name="morph_weight" define="MORPHED">				
+<unif name="dissolve" define="DISSOLVE" >					
+<vert>
+
+#version 420 core
+out vec3 vNormal;
+
+
+const float fres_eta = 1.0;
+const float fres_F = ((1.0 - fres_eta) * (1.0 - fres_eta)) / ((1.0 + fres_eta) * (1.0 + fres_eta));
+
+out vec2 uv_texcoord_0;
+out vec3 vertex;
+
+
+layout(binding=3) uniform SMaterialParam {
+	vec4 customParam0;
+};
+
+out vec3 vVertex;
+#include <skinning.hpp>
+IN_VERTEX_ALL;
+void main(){
+vec4 vertexPos = vec4(inVertex,1.0);
+vNormal = DecompressNormal( inNormal );
+TransformVertex( vertexPos , vNormal );
+gl_Position = vertexPos;
+uv_texcoord_0 = DecompressUV( inUV );
+vertex = ( GetViewMatrix() * InstanceVertex( vec4( inVertex , 1.0 ) ) ).xyz;
+}
+
+
+</vert>
+
+<frag>
+
+#version 420 core
+uniform vec4 color;
+in vec3 vNormal;
+#include <finalize.hpp>
+#include <cameraBuffer.hpp>
+#include <dissolve.hpp>
+
+
+layout(binding=2) uniform sampler2D t_sample_2;
+layout(binding=0) uniform sampler2D t_sample_0;
+
+layout(binding=11) uniform sampler2DRect tDepthBuffer;
+
+const float fres_eta = 1.0;
+const float fres_F = ((1.0 - fres_eta) * (1.0 - fres_eta)) / ((1.0 + fres_eta) * (1.0 + fres_eta));
+
+in vec2 uv_texcoord_0;
+in vec3 vertex;
+
+
+layout(binding=3) uniform SMaterialParam {
+	vec4 customParam0;
+};
+
+in vec3 vVertex;
+
+void main(void) {
+dissolveDiscard();
+const vec4 tex_sampler_16 = texture( t_sample_2 , uv_texcoord_0 );
+const float unif_21 = customParam0.x;
+const float unif_7 = customParam0.y;
+vec2 compute_29 = ( ( ( ( vec2( tex_sampler_16.r , tex_sampler_16.g ) ) * 2.0 + -1.0 ) * ( unif_21 ) ) ) + ( ( GetTime() ) * ( unif_7 ) );
+const vec4 tex_sampler_2 = texture( t_sample_0 , uv_texcoord_0 + compute_29 );
+const vec4 tex_sampler_14 = texture( t_sample_0 , compute_29 - uv_texcoord_0 );
+
+const vec4 tex_sampler_a2 = texture( t_sample_0 , 4.0 * ( uv_texcoord_0 + compute_29 ) );
+const vec4 tex_sampler_a14 = texture( t_sample_0 , 4.0* ( compute_29 - uv_texcoord_0 ) );
+
+vec3 out_Normal = normalize( vNormal );
+
+vec3 fres_eye = - normalize( vertex );
+float fresnel_coeff1 = 4.0 * pow( 1.0 - dot( fres_eye , out_Normal ) , 2.0 );
+float fresnel_coeff2 = 6.0 * pow( 1.0 - dot( fres_eye , out_Normal ) , 4.0 );
+
+float currentDepth = linearize( texelFetch( tDepthBuffer , ivec2(gl_FragCoord.xy) ).x );
+float depthDiff = clamp( 1.0 - 4.0 * abs( currentDepth + vertex.z ) , 0.0, 1.0 );
+
+const float out_Translucency = color.a * ( ( tex_sampler_2.g ) * ( tex_sampler_14.g ) )  * ( 0.2 + fresnel_coeff1 - fresnel_coeff2 );
+
+const vec3 unlit_diffuse = ( tex_sampler_2.rgb + tex_sampler_14.rbg ) * 0.5 + depthDiff * out_Translucency;
+const vec3 out_Albedo = color.rgb * unlit_diffuse + 100.0 * pow( tex_sampler_a2.g * tex_sampler_a14.g, 16.0 ) ;
+
+const float out_Emissive = 0.0;
+const float out_Roughness = 0.9;
+const float out_Metalic = 0.050;
+FinalDraw( out_Albedo * ( out_Translucency + depthDiff ), 0.0 , out_Normal , out_Roughness , out_Metalic , out_Emissive ); }
+
+
+</frag>
+</shader>

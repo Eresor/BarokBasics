@@ -1,0 +1,89 @@
+displacement 0 0 0 
+
+uniform 2 1 0.900000
+uniform 3 1 0.050000
+node { 
+	class {TextureSample}
+	id 4
+	pos -288 -286
+	empty_node  {0}
+	empty_node  {}
+	empty_node  {Uniform.21}
+	empty_node 1.0
+	empty_node 1.0
+} 
+
+node { 
+	class {Material}
+	id 1
+	pos 422 -66
+	node 4  {255 255 255}
+	empty_node 0.0
+	empty_node 0.0
+	node 8 0.9
+	node 9 0.050
+	empty_node  {}
+	empty_node  {}
+	empty_node  {0}
+	empty_node 2.0
+	empty_node  {2}
+	empty_node  {}
+} 
+
+node { 
+	class {TextureSample}
+	id 6
+	pos -541 -117
+	empty_node  {1}
+	empty_node  {}
+	empty_node  {Uniform.28}
+	empty_node 1.0
+	empty_node 1.0
+} 
+
+node { 
+	class {Uniform}
+	id 2
+	pos -518 63
+	empty_node  {Roughness}
+	empty_node  {0}
+	empty_node 0.0
+	empty_node 1.0
+} 
+
+node { 
+	class {Uniform}
+	id 3
+	pos -517 266
+	empty_node  {Glossiness}
+	empty_node  {0}
+	empty_node 0.0
+	empty_node 1.0
+} 
+
+node { 
+	class {Mul}
+	id 8
+	pos -28 11
+	node 2  {}
+	slot 3
+	node 6  {}
+} 
+
+node { 
+	class {Mul}
+	id 9
+	pos -29 109
+	node 3  {}
+	slot 4
+	node 6  {}
+} 
+
+node { 
+	class {DeriveNormalZ}
+	id 7
+	pos -127 -127
+	node 6  {}
+	empty_node  {1}
+} 
+

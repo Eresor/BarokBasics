@@ -1,0 +1,77 @@
+<shader  name="laserMaterial" priority="2" material="1" >
+
+<unif name="t_sample_0" value="0" type="texture" magic="100000" alias="Uniform.14">
+<unif name="morph_weight" define="MORPHED">				
+<vert>
+
+#version 420 core
+out vec3 vNormal;
+
+
+
+out vec2 uv_texcoord_0;
+
+
+
+#include <skinning.hpp>
+IN_VERTEX_ALL;
+out vec4 vColor;
+#ifdef DISSOLVE
+	flat out vec2	vDissolveParams;
+#endif
+void main(){
+vec4 vertexPos = vec4(inVertex,1.0);
+vNormal = DecompressNormal( inNormal );
+#ifdef DISSOLVE
+	vDissolveParams = CurrentInstanceDetailParams().xy;
+#endif
+vColor	= CurrentInstanceColor();
+TransformVertex( vertexPos , vNormal );
+gl_Position = vertexPos;
+uv_texcoord_0 = DecompressUV( inUV );
+}
+
+
+</vert>
+
+<frag>
+
+#version 420 core
+in vec3 vNormal;
+in vec4 vColor;
+#ifdef DISSOLVE
+	flat in vec2	vDissolveParams;
+#endif
+#include <finalize.hpp>
+#include <cameraBuffer.hpp>
+#include <dissolve.hpp>
+
+
+layout(binding=0) uniform sampler2D t_sample_0;
+
+
+in vec2 uv_texcoord_0;
+
+
+
+
+void main(void) {
+dissolveDiscard(vDissolveParams);
+const vec4 tex_sampler_2 = texture( t_sample_0 , uv_texcoord_0 );
+
+vec3 out_Normal = normalize( vNormal );
+
+const vec3 unlit_diffuse = tex_sampler_2.rgb ;
+const vec3 out_Albedo = vColor.rgb * unlit_diffuse;
+const float out_Translucency = 1.0;
+const float out_Emissive = 0.0;
+const float out_Roughness = 0.9;
+const float out_Metalic = 0.050;
+const float blendAdditive = 0.0;
+const vec3 out_AlbedoPremul = out_Albedo * out_Translucency;
+const float out_TranslucencyPremul = out_Translucency * blendAdditive;
+FinalDraw( out_AlbedoPremul*2 , 0.0 , out_Normal , out_Roughness , out_Metalic , out_Emissive ); }
+
+
+</frag>
+</shader>
